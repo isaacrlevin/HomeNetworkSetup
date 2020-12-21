@@ -1,0 +1,37 @@
+version: "3.7"
+services:
+
+## Jackett – Torrent Proxy/RSS Generator
+  jackett:
+    container_name: jackett
+    image: linuxserver/jackett:latest
+    restart: always
+    networks:
+      traefik_proxy:
+        ipv4_address: 192.168.50.249 # Use this IP to connect to sonarr/radarr/lidarr/ttrss: http://192.168.50.249:9117/...
+    ports:
+      - "9117:9117"
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - $CONFIGFOLDER/jackett:/config
+      - $STORAGEFOLDER/Torrents:/downloads
+      - $DOCKERDIR/resolv.conf:/etc/resolv.conf
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+    labels:
+      - "traefik.enable=true"
+      ## HTTP Routers
+      - "traefik.http.routers.jackett-rtr.entrypoints=https"
+      - "traefik.http.routers.jackett-rtr.rule=HostHeader(`jackett.$DOMAINNAME`)"
+      ## Middlewares
+      - "traefik.http.routers.jackett-rtr.middlewares=chain-oauth@file"
+      ## HTTP Services
+      - "traefik.http.routers.jackett-rtr.service=jackett-svc"
+      - "traefik.http.services.jackett-svc.loadbalancer.server.port=9117"
+
+networks:
+  traefik_proxy:
+    external: true

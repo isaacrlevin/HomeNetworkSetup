@@ -1,0 +1,26 @@
+version: "3"
+
+## DOES NOT RUN ON SAME HOST AS TRAEFIK
+services:
+  pihole:
+    container_name: pihole
+    hostname: pihole
+    image: pihole/pihole:latest
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "67:67/udp"
+      - "80:80/tcp"
+      - "443:443/tcp"
+    environment:
+      TZ: 'America/Los_Angeles' #this is the time zone
+      WEBPASSWORD: 'is04aac!'
+    volumes:
+       - '/home/pi/docker/config/etc-pihole/:/etc/pihole/'
+       - '/home/pi/docker/config/etc-dnsmasq.d/:/etc/dnsmasq.d/'
+    dns:
+      - 127.0.0.1
+      - 1.1.1.1
+    cap_add:
+      - NET_ADMIN
+    restart: unless-stopped

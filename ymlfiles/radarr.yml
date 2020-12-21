@@ -1,0 +1,45 @@
+version: "3.7"
+services:
+
+## Radarr – Movie Download and Management
+  radarr:
+    container_name: radarr
+    image: ghcr.io/linuxserver/radarr
+    restart: always
+    networks:
+      traefik_proxy:
+        ipv4_address: 192.168.50.245
+    ports:
+      - "7878:7878"
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - $CONFIGFOLDER/radarr:/config
+      - $STORAGEFOLDER/Torrents:/downloads
+      - $STORAGEFOLDER/Movies:/movies
+      - $DOCKERDIR/resolv.conf:/etc/resolv.conf
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+    labels:
+      - "traefik.enable=true"
+      ## HTTP Routers
+      - "traefik.http.routers.radarr-rtr.entrypoints=https"
+      - "traefik.http.routers.radarr-rtr.rule=HostHeader(`radarr.$DOMAINNAME`)"
+      - "traefik.http.routers.radarr-rtr.priority=10"
+      - "traefik.http.routers.radarr-rtr.tls=true"
+      ## Middlewares
+      - "traefik.http.routers.radarr-rtr.middlewares=chain-oauth@file"
+      ## HTTP Services
+      - "traefik.http.routers.radarr-rtr.service=radarr-svc"
+      - "traefik.http.services.radarr-svc.loadbalancer.server.port=7878"
+      ## API Forward Auth Bypass
+      - "traefik.http.routers.radarr-bypass.entrypoints=https"
+      - "traefik.http.routers.radarr-bypass.rule=Headers(`X-Api-Key`, `$RADARR_API_KEY`) || Query(`apikey`, `$RADARR_API_KEY`)"
+      - "traefik.http.routers.radarr-bypass.priority=20"
+      - "traefik.http.routers.radarr-bypass.service=radarr-svc"
+
+networks:
+  traefik_proxy:
+    external: true

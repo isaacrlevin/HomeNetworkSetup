@@ -1,0 +1,34 @@
+version: "3.7"
+services:
+
+## StatPing - Status Page & Monitoring Server
+  # Login: admin / admin
+
+  statping:
+    container_name: statping
+    image: statping/statping:latest
+    restart: unless-stopped
+    networks:
+      - traefik_proxy
+#    ports:
+#      - "4480:8080"
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - $CONFIGFOLDER/statping:/app
+    environment:
+      - DB_CONN=sqlite
+    labels:
+      - "traefik.enable=true"
+      ## HTTP Routers
+      - "traefik.http.routers.statping-rtr.entrypoints=https"
+      - "traefik.http.routers.statping-rtr.rule=HostHeader(`statping.$DOMAINNAME`)"
+      ## Middlewares
+      - "traefik.http.routers.statping-rtr.middlewares=chain-oauth@file"
+      ## HTTP Services
+      - "traefik.http.routers.statping-rtr.service=statping-svc"
+      - "traefik.http.services.statping-svc.loadbalancer.server.port=8080"
+
+networks:
+  traefik_proxy:
+    external: true

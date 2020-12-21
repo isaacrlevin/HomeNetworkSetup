@@ -1,0 +1,60 @@
+version: "3.7"
+services:
+
+## qBittorrent with VPN – Bittorrent Downloader
+  # mkdir $USERDIR/docker/qbittorrent
+  # mkdir $USERDIR/docker/qbittorrent/openvpn
+  # Place ovpn file in $USERDIR/docker/qbittorrent/openvpn
+  # If you can't see text in the WebUI go to your qbittorrent.conf file and add "en" to the Locale setting so it looks like this: General\Locale=en
+
+  qbittorrent:
+    container_name: qbittorrent
+    image: ghcr.io/linuxserver/qbittorrent
+    restart: always
+    networks:
+      traefik_proxy:
+        ipv4_address: 192.168.50.247
+    ports:
+      - "8022:8080"
+      - "8999:8999"
+      - "8999:8999/udp"
+      - "34400:34400"
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - $CONFIGFOLDER/qbittorrent:/config
+      - $STORAGEFOLDER/Torrents:/downloads
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - VPN_ENABLED=no
+    labels:
+      - "traefik.enable=true"
+      ## HTTP Routers
+      - "traefik.http.routers.qbittorrent-rtr.entrypoints=https"
+      - "traefik.http.routers.qbittorrent-rtr.rule=HostHeader(`qbittorrent.$DOMAINNAME`)"
+      - "traefik.http.routers.qbittorrent-rtr.priority=10"
+      ## Middlewares
+      - "traefik.http.routers.qbittorrent-rtr.middlewares=chain-oauth@file"
+      ## HTTP Services
+      - "traefik.http.routers.qbittorrent-rtr.service=qbittorrent-svc"
+      - "traefik.http.services.qbittorrent-svc.loadbalancer.server.port=8080"
+      ## API Forward Auth Bypass
+      - "traefik.http.routers.qbittorrent-bypass.entrypoints=https"
+      - "traefik.http.routers.qbittorrent-bypass.rule=HostHeader(`qbittorrent.$DOMAINNAME`) && PathPrefix(`/api/`)"
+      - "traefik.http.routers.qbittorrent-bypass.priority=20"
+      - "traefik.http.routers.qbittorrent-bypass.service=qbittorrent-svc"
+
+      #Xteve
+      ## HTTP Routers
+      - "traefik.http.routers.xteve-rtr.entrypoints=https"
+      - "traefik.http.routers.xteve-rtr.rule=HostHeader(`xteve.$DOMAINNAME`)"
+      ## Middlewares
+      - "traefik.http.routers.xteve-rtr.middlewares=chain-oauth@file"
+      ## HTTP Services
+      - "traefik.http.routers.xteve-rtr.service=xteve-svc"
+      - "traefik.http.services.xteve-svc.loadbalancer.server.port=34400"
+
+networks:
+  traefik_proxy:
+    external: true

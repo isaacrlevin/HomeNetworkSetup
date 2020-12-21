@@ -1,0 +1,59 @@
+version: "3.7"
+services:
+  nextcloud:
+    container_name: nextcloud
+    image: nextcloud:latest
+    restart: always
+    extra_hosts:
+      - "mariadb:192.168.250.250"
+      - "redis:192.168.50.10"
+    networks:
+      - traefik_proxy
+      - mariadb
+    ports:
+      - "4333:443"
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - $CONFIGFOLDER/nc:/var/www/html/config
+      - $STORAGEFOLDER/nc-data:/var/www/html/data
+      - $DOCKERDIR/resolv.conf:/etc/resolv.conf
+      - $STORAGEFOLDER/photos:/ext-photo
+      - $CONFIGFOLDER/nc-apps:/var/www/html/custom_apps
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+      - NEXTCLOUD_ADMIN_PASSWORD=$MY_PASSWORD
+      - NEXTCLOUD_ADMIN_USER=isaac
+      - MYSQL_HOST=$DB_HOST:3306
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_PASSWORD=$MYSQL_ROOT_PASSWORD
+      - NEXTCLOUD_HOSTNAME="nc.$DOMAINNAME"
+      - MYSQL_USER=root
+      - NEXTCLOUD_TRUSTED_DOMAINS="nc.$DOMAINNAME"
+      - TRUSTED_PROXIES=192.168.50.0/24
+      - OVERWRITEPROTOCOL=https
+      - APACHE_DISABLE_REWRITE_IP=1
+      - REDIS_HOST=redis
+      - REDIS_HOST_PASSWORD=$REDIS_PASSWORD
+      - START_CRON=true
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik_proxy
+      - traefik.http.routers.nextcloud.middlewares=nextcloud,nextcloud_redirect
+      - traefik.http.routers.nextcloud.tls.certresolver=dns-cloudflare
+      - traefik.http.routers.nextcloud.rule=Host(`nc.$DOMAINNAME`)
+      - traefik.http.middlewares.nextcloud.headers.customFrameOptionsValue=ALLOW-FROM https://$DOMAINNAME
+      - traefik.http.middlewares.nextcloud.headers.contentSecurityPolicy=frame-ancestors 'self' $DOMAINNAME *.$DOMAINNAME
+      - traefik.http.middlewares.nextcloud.headers.stsSeconds=155520011
+      - traefik.http.middlewares.nextcloud.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.nextcloud.headers.stsPreload=true
+      - traefik.http.middlewares.nextcloud_redirect.redirectregex.regex=/.well-known/(card|cal)dav
+      - traefik.http.middlewares.nextcloud_redirect.redirectregex.replacement=/remote.php/dav/
+
+networks:
+  traefik_proxy:
+    external: true
+  mariadb:
+    external: true

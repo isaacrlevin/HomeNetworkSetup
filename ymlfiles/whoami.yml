@@ -1,0 +1,26 @@
+version: "3.7"
+services:
+
+## Who Am I?? - Show Headers
+  whoami:
+    container_name: whoami
+    image: containous/whoami:latest
+    restart: unless-stopped
+    networks:
+      - traefik_proxy
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.whoami-rtr.entrypoints=https"
+      - "traefik.http.routers.whoami-rtr.rule=HostHeader(`whoami.$DOMAINNAME`)"
+      ## Middlewares
+      - "traefik.http.routers.whoami-rtr.middlewares=chain-oauth@file"
+      ## HTTP Services
+      - "traefik.http.routers.whoami-rtr.service=whoami-svc"
+      - "traefik.http.services.whoami-svc.loadbalancer.server.port=80"
+
+networks:
+  traefik_proxy:
+    external: true

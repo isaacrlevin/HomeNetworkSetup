@@ -1,0 +1,36 @@
+version: '3.7'
+
+services:
+  presencelight:
+    image: isaaclevin/presencelight:debian-arm32
+    container_name: presencelight
+    restart: unless-stopped
+    networks:
+      - traefik_proxy
+    environment:
+      TZ: "America/Los_Angeles"
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ASPNETCORE_URLS: "https://+:443;http://+:80"
+      ASPNETCORE_Kestrel__Certificates__Default__Password: $MY_PASSWORD
+      ASPNETCORE_Kestrel__Certificates__Default__Path: "/https/presencelight.pfx"
+    ports:
+      - "8001:80"
+      - "4433:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ~/.aspnet/https:/https:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_proxy"
+      ## HTTP Routers
+      - "traefik.tcp.routers.presencelight-tcp.entrypoints=https"
+      - "traefik.tcp.routers.presencelight-tcp.rule=HostSNI(`presencelight.$DOMAINNAME`)"
+      - "traefik.tcp.routers.presencelight-tcp.tls.certresolver=dns-cloudflare"
+      - "traefik.tcp.routers.presencelight-tcp.tls.passthrough=true"
+      ## TCP Services
+      - "traefik.tcp.routers.presencelight-tcp.service=presencelight-tcp-svc"
+      - "traefik.tcp.services.presencelight-tcp-svc.loadbalancer.server.port=443"
+
+networks:
+  traefik_proxy:
+    external: true

@@ -1,0 +1,39 @@
+version: "3.7"
+services:
+
+  netdata:
+    container_name: netdata
+    image: netdata/netdata
+    hostname: netdata.$DOMAINNAME
+    restart: unless-stopped
+    networks:
+      - traefik_proxy
+    ports:
+      - 19999:19999
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - apparmor:unconfined
+    environment:
+      - PGID=0
+    volumes:
+      - $CONFIGFOLDER/netdata:/etc/netdata
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/group:/etc/group:ro
+      - /proc:/proc:ro
+      - /sys:/sys:ro
+      - /etc/os-release:/etc/os-release:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.netdata-rtr.entrypoints=https"
+      - "traefik.http.routers.netdata-rtr.rule=HostHeader(`netdata.$DOMAINNAME`)"
+      ## Middlewares
+      - "traefik.http.routers.netdata-rtr.middlewares=chain-oauth@file"
+      ## HTTP Services
+      - "traefik.http.routers.netdata-rtr.service=netdata-svc"
+      - "traefik.http.services.netdata-svc.loadbalancer.server.port=19999"
+networks:
+  traefik_proxy:
+    external: true
